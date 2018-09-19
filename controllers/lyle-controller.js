@@ -2,14 +2,54 @@ var bodyParser = require('body-parser');
 
 var jsonParser = bodyParser.json();
 
+var mongoose = require('mongoose');
+
+mongoose.connect('mongodb://chenzy11:chenzy11@ds161062.mlab.com:61062/lyleserver', {useNewUrlParser: true});
+
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+    console.log('connected to database successfully!');
+});
+
+var userSchema = new mongoose.Schema({
+    username: String,
+    password: String,
+    nickname: {type: String, default: "用户"},
+    profile_pic: {type: String, default: ""},
+    sign: {type: String, default: "这个人很懒，什么都没有留下"}
+});
+
+var User = mongoose.model('User', userSchema);
+
 module.exports = function(app) {
     app.post('/register', jsonParser, function(req, res){
         console.log('register');
         console.log(req.body);
-        var result = {
-            state: 1
-        };
-        res.json(result);
+        var user = new User;
+        user.username = req.body.UserName;
+        user.password = req.body.PassWord;
+        User.findOne({username: user.username}, function(err, data){
+            if (data) {
+                console.log('user existed');
+                var result = {
+                    state: 0
+                };
+                res.json(result);
+            }
+            else {
+                user.save(function(err, data){
+                    if (err) {
+                        throw err;
+                    }
+                    console.log('user saved');
+                    var result = {
+                        state: state
+                    };
+                    res.json(result);
+                });
+            }
+        });
     });
 
     app.post('/login', jsonParser, function(req, res){
