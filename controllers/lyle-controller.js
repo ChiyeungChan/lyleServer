@@ -36,8 +36,7 @@ module.exports = function(app) {
                     state: 0
                 };
                 res.json(result);
-            }
-            else {
+            } else {
                 user.save(function(err, data){
                     if (err) {
                         throw err;
@@ -55,6 +54,27 @@ module.exports = function(app) {
     app.post('/login', jsonParser, function(req, res){
         console.log('login');
         console.log(req.body);
+        User.findOne({username: req.body.UserName}, function(err, data) {
+            if (!data || data.password != req.body.PassWord) {
+                var result = {
+                    state: 0,
+                    userInfo: null
+                }
+                res.json(result);
+            } else {
+                var result = {
+                    state: 0,
+                    userInfo: {
+                        Uid: data._id,
+                        UserName: data.username,
+                        Nickname: data.nickname,
+                        Profile_pic: data.profile_pic,
+                        Sign: data.sign
+                    }
+                };
+                console.log(result);
+            }
+        });
         var result = {
             state: 1,
             userInfo: {
