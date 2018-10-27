@@ -106,43 +106,48 @@ module.exports = function(app) {
     app.post('/getnewmoment', jsonParser, function(req, res){
         console.log('refresh moment');
         console.log(req.body);
-        User.findOne({username: "1234"}, function(err, data){
-            var m = new Moment;
-            m.user_id = data._id;
-            m.longitude = 20;
-            m.latitude = 20;
-            m.text = "哈哈哈";
-            m.image = [];
-            m.video = '';
-            m.publish_time = new Date();
-            m.location = "这里";
-            m.comments = [];
-            m.likes = [];
-            data.moment_ids.push(m._id);
+    
+        // Moment.find({"$xwhere": ""}, {limit: 4}, {sort: }, function(err, data){
+        //     console.log(data);
+        // });
+
+        Moment.find({publish_time: {$lt: new Date(req.body.Time_m)}}).sort({'_id': -1}).limit(5).exec(function(err, data){
+            if (err) {
+                var result = {
+                    state: 0
+                };
+                res.json(result);
+                throw err;
+            }
             var result = {
-                state: 1, 
-                list: [
-                    {
-                        Mid: m._id,
-                        Uid: m.user_id,
-                        LocY: m.latitude,
-                        LocX: m.longitude,
-                        Text_m: m.text,
-                        Image1: '',
-                        Image2: '',
-                        Image3: '',
-                        Image4: '',
-                        Image5: '',
-                        Image6: '',
-                        Image7: '',
-                        Image8: '',
-                        Image9: '',
-                        Video: '',
-                        Time_m: m.publish_time,
-                        Loc_Des: m.location
-                    }
-                ]
+                state: 1,
+                list: []
             };
+            for (var i = 0; i < data.length; i++) {
+                // var d = new Date(req.body.Time_m);
+                // console.log(d);
+                // console.log(data[i].publish_time);
+                var m = {
+                    Mid: data[i]._id,
+                    Uid: data[i].user_id,
+                    LocY: data[i].latitude,
+                    LocX: data[i].longitude,
+                    Text_m: data[i].text,
+                    Video: data[i].video,
+                    Time_m: data[i].publish_time,
+                    Loc_Des: data[i].location
+                };
+                var prefix = 'Image';
+                for (var j = 0; j < 9; j++) {
+                    if (j < data[i].image.length) {
+                        m[prefix+(j+1)] = data[i].image[j];
+                    }
+                    else {
+                        m[prefix+(j+1)] = '';
+                    }
+                }
+                result['list'].push(m);
+            }
             res.json(result);
         });
     });
@@ -194,13 +199,40 @@ module.exports = function(app) {
                         if (files[index] === undefined) {
                             break;
                         }
-                        m.image.push(files[index][0]['path'].split('/')[2]);
+                        var originPath = files[index][0]['path'];
+                        var suffix = originPath.split('.')[1];
+                        var newPath = 'uploads/images/' + String(m._id) + index + '.' + suffix;
+                        fs.renameSync(originPath, newPath);
+                        m.image.push(String(m._id) + index + '.' + suffix);
                     }
+                } else {
+                    m.video = fields['Video'][0];
                 }
                 console.log(m.image);
                 data.moment_ids.push(m._id);
-                moment.save(function(err, data){
-                    
+                m.save(function(err, momentData){
+                    if (err) {
+                        var result = {
+                            state: 0
+                        };
+                        res.json(result);
+                        throw err;
+                    }
+                    data.save(function(err, userData){
+                        if (err) {
+                            var result = {
+                                state: 0
+                            };
+                            res.json(result);
+                            throw err;
+                        }
+                        else {
+                            result = {
+                                state: 1,                               
+                            };
+                            res.json(result);
+                        }
+                    });
                 });
             });
         });
